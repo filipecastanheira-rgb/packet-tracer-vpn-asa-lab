@@ -1,0 +1,78 @@
+! ============================================================
+! R3-LISBON - Lisbon Branch Router
+! Cisco 2811 - IOS 15.1
+! Role: Lisbon LAN gateway, VPN S2S spoke to Datacenter
+! ============================================================
+
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname R3-LISBON
+!
+enable secret 5 $1$mERr$4dpRATIgxQacPVK0CfNV4/
+!
+! --- VPN SITE-TO-SITE -------------------------------------------
+! IKE Phase 1
+crypto isakmp policy 10
+ encr aes
+ authentication pre-share
+ group 2
+!
+! Pre-shared key - peer: R5-DC Fa0/1
+crypto isakmp key cisco123 address 192.168.70.202
+!
+! IPsec Phase 2
+crypto ipsec transform-set VPN-SET esp-aes esp-sha-hmac
+!
+! Crypto Map - tunnel to Datacenter
+crypto map VPN-MAP 10 ipsec-isakmp
+ set peer 192.168.70.202
+ set transform-set VPN-SET
+ match address VPN-DC
+!
+! --- INTERFACES -------------------------------------------------
+interface FastEthernet0/0
+ description Lisbon LAN - user gateway
+ ip address 192.168.70.33 255.255.255.224
+ ip helper-address 192.168.70.3
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1
+ description WAN link to R5-DC (VPN tunnel)
+ ip address 192.168.70.201 255.255.255.252
+ duplex auto
+ speed auto
+ crypto map VPN-MAP
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+! --- ROUTING ----------------------------------------------------
+ip classless
+! Default route to Datacenter (R5-DC)
+ip route 0.0.0.0 0.0.0.0 192.168.70.202
+!
+! --- INTERESTING TRAFFIC ACL ------------------------------------
+! Defines traffic to encrypt: Lisbon LAN <-> Datacenter LAN
+ip access-list extended VPN-DC
+ permit ip 192.168.70.32 0.0.0.31 192.168.70.0 0.0.0.31
+!
+! --- SECURITY ---------------------------------------------------
+no cdp run
+!
+banner motd ^C Unauthorized access is prohibited. All activities are monitored. ^C
+!
+line con 0
+ password 7 08701E1D5D4C
+ login
+!
+line vty 0 4
+ password 7 08701E1D5D4C
+ login
+ transport input ssh
+!
+end

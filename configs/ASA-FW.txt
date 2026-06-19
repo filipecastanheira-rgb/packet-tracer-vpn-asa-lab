@@ -1,0 +1,159 @@
+! ============================================================
+! ASA-FW - Cisco ASA 5506-X Firewall
+! ASA Version 9.6(1)
+! Role: Perimeter firewall, NAT, ACL, SSL Clientless VPN
+! ============================================================
+
+ASA Version 9.6(1)
+!
+hostname ASA-FW
+enable password PddnxMYKcNoF3mwN encrypted
+names
+!
+! --- INTERFACES -------------------------------------------------
+! Inside - connected to SW2-DC (Datacenter LAN)
+interface GigabitEthernet1/1
+ nameif inside
+ security-level 100
+ ip address 192.168.70.2 255.255.255.224
+!
+! Outside - connected to ISP-ROUTER
+interface GigabitEthernet1/2
+ nameif outside
+ security-level 0
+ ip address 200.200.200.201 255.255.255.252
+!
+! Unused interfaces - disabled
+interface GigabitEthernet1/3
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+interface GigabitEthernet1/4
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+interface GigabitEthernet1/5
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+interface GigabitEthernet1/6
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+interface GigabitEthernet1/7
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+interface GigabitEthernet1/8
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+interface Management1/1
+ management-only
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+! --- SSL CLIENTLESS VPN -----------------------------------------
+! WebVPN portal active on outside interface (HTTPS port 443)
+webvpn
+ enable outside
+!
+! --- DYNAMIC NAT (PAT) ------------------------------------------
+! Interface PAT for all internal networks
+! Allows internet access using ASA public IP (200.200.200.201)
+object network INTERNAL-DC
+ subnet 192.168.70.0 255.255.255.224
+ nat (inside,outside) dynamic interface
+!
+object network INTERNAL-LISBON
+ subnet 192.168.70.32 255.255.255.224
+ nat (inside,outside) dynamic interface
+!
+object network INTERNAL-PORTO
+ subnet 192.168.70.64 255.255.255.224
+ nat (inside,outside) dynamic interface
+!
+! Note: NET-INSIDE was created earlier and overlaps the entries above
+! In production this should be removed to avoid NAT ambiguity
+object network NET-INSIDE
+ subnet 192.168.70.0 255.255.255.0
+ nat (inside,outside) dynamic interface
+!
+! --- ROUTING ----------------------------------------------------
+! Default route to ISP
+route outside 0.0.0.0 0.0.0.0 200.200.200.202 1
+! Routes to branch offices via R5-DC
+route inside 192.168.70.32 255.255.255.224 192.168.70.1 1
+route inside 192.168.70.64 255.255.255.224 192.168.70.1 1
+!
+! --- OUTSIDE ACL ------------------------------------------------
+! Controls inbound traffic on outside interface
+! Least privilege principle - only what is strictly necessary
+access-list OUTSIDE-IN extended permit icmp any any echo-reply
+access-list OUTSIDE-IN extended permit icmp any any unreachable
+access-list OUTSIDE-IN extended permit tcp any any eq 443
+access-list OUTSIDE-IN extended permit udp any any eq isakmp
+access-list OUTSIDE-IN extended deny ip any any
+!
+! Apply ACL to outside interface
+access-group OUTSIDE-IN in interface outside
+!
+! --- SSH AUTHENTICATION -----------------------------------------
+aaa authentication ssh console LOCAL
+!
+! --- SSL VPN GROUP POLICY ---------------------------------------
+group-policy GP-WEBVPN internal
+group-policy GP-WEBVPN attributes
+ vpn-tunnel-protocol ssl-clientless
+!
+! --- LOCAL USER ACCOUNTS ----------------------------------------
+! Users with SSL VPN portal access
+username admin password KFKa9cw3L4ULcSGD encrypted
+username joao password XK9CbN4MkQEI0jdt encrypted
+username manuel password XK9CbN4MkQEI0jdt encrypted
+username maria password XK9CbN4MkQEI0jdt encrypted
+!
+! --- TRAFFIC INSPECTION -----------------------------------------
+! Stateful inspection - allows return traffic dynamically
+class-map inspection_default
+ match default-inspection-traffic
+!
+policy-map type inspect dns preset_dns_map
+ parameters
+  message-length maximum 512
+!
+policy-map global_policy
+ class inspection_default
+  inspect dns preset_dns_map
+  inspect ftp
+  inspect http
+  inspect icmp
+  inspect tftp
+!
+service-policy global_policy global
+!
+! --- SSH ACCESS -------------------------------------------------
+telnet timeout 5
+ssh 0.0.0.0 0.0.0.0 inside
+ssh timeout 5
+!
+! --- SSL VPN TUNNEL GROUP ---------------------------------------
+tunnel-group DefaultWEBVPNGroup type remote-access
+tunnel-group DefaultWEBVPNGroup general-attributes
+ default-group-policy GP-WEBVPN
+!
+end

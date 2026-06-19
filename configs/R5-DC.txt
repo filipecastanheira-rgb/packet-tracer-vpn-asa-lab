@@ -1,0 +1,104 @@
+! ============================================================
+! R5-DC - Datacenter Router (VPN Hub)
+! Cisco 2811 - IOS 15.1
+! Role: Datacenter LAN gateway, VPN hub for Lisbon and Porto
+! ============================================================
+
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname R5-DC
+!
+enable secret 5 $1$mERr$4dpRATIgxQacPVK0CfNV4/
+!
+! --- VPN SITE-TO-SITE -------------------------------------------
+! IKE Phase 1
+crypto isakmp policy 10
+ encr aes
+ authentication pre-share
+ group 2
+!
+! Pre-shared keys per peer
+crypto isakmp key cisco123 address 192.168.70.201
+crypto isakmp key cisco123 address 192.168.70.205
+!
+! IPsec Phase 2
+crypto ipsec transform-set VPN-SET esp-aes esp-sha-hmac
+!
+! Crypto Map entry 10 - tunnel to Lisbon
+crypto map VPN-MAP 10 ipsec-isakmp
+ set peer 192.168.70.201
+ set transform-set VPN-SET
+ match address VPN-LISBON
+!
+! Crypto Map entry 20 - tunnel to Porto
+crypto map VPN-MAP 20 ipsec-isakmp
+ set peer 192.168.70.205
+ set transform-set VPN-SET
+ match address VPN-PORTO
+!
+! --- INTERFACES -------------------------------------------------
+interface FastEthernet0/0
+ description Datacenter LAN - servers and ASA gateway
+ ip address 192.168.70.1 255.255.255.224
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1
+ description WAN link to R3-LISBON (Lisbon VPN tunnel)
+ ip address 192.168.70.202 255.255.255.252
+ duplex auto
+ speed auto
+ crypto map VPN-MAP
+!
+interface FastEthernet1/0
+ description WAN link to R4-PORTO (Porto VPN tunnel)
+ ip address 192.168.70.206 255.255.255.252
+ duplex auto
+ speed auto
+ crypto map VPN-MAP
+!
+interface FastEthernet1/1
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+! --- ROUTING ----------------------------------------------------
+ip classless
+! Default route to ASA firewall (internet exit)
+ip route 0.0.0.0 0.0.0.0 192.168.70.2
+! Static routes to branches - required for return traffic to match crypto ACLs
+ip route 192.168.70.32 255.255.255.224 192.168.70.201
+ip route 192.168.70.64 255.255.255.224 192.168.70.205
+!
+! --- INTERESTING TRAFFIC ACLs -----------------------------------
+! Defines traffic to encrypt: DC LAN <-> Lisbon LAN
+ip access-list extended VPN-LISBON
+ permit ip 192.168.70.0 0.0.0.31 192.168.70.32 0.0.0.31
+!
+! Defines traffic to encrypt: DC LAN <-> Porto LAN
+ip access-list extended VPN-PORTO
+ permit ip 192.168.70.0 0.0.0.31 192.168.70.64 0.0.0.31
+!
+! --- SECURITY ---------------------------------------------------
+no cdp run
+!
+banner motd ^C Unauthorized access is prohibited. All activities are monitored. ^C
+!
+line con 0
+ password 7 08701E1D5D4C
+ login
+!
+line vty 0 4
+ password 7 08701E1D5D4C
+ login
+ transport input ssh
+!
+end

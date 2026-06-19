@@ -1,0 +1,59 @@
+! ============================================================
+! ISP-ROUTER - ISP / Simulated Internet Router
+! Cisco 1941 - IOS 15.1
+! Role: Simulates ISP router and internet connectivity
+! ============================================================
+
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname ISP-ROUTER
+!
+enable secret 5 $1$mERr$4dpRATIgxQacPVK0CfNV4/
+!
+ip cef
+no ipv6 cef
+!
+! --- INTERFACES -------------------------------------------------
+! G0/0 - link to ASA-FW outside interface
+interface GigabitEthernet0/0
+ description Link to ASA-FW outside
+ ip address 200.200.200.202 255.255.255.252
+ duplex auto
+ speed auto
+!
+! G0/1 - simulated internet / external network
+interface GigabitEthernet0/1
+ description Simulated Internet - external network
+ ip address 204.204.204.1 255.255.255.0
+ duplex auto
+ speed auto
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+! --- ROUTING ----------------------------------------------------
+ip classless
+! Route to company internal networks via ASA-FW
+ip route 192.168.70.0 255.255.255.0 200.200.200.201
+! Default route to simulated internet gateway
+ip route 0.0.0.0 0.0.0.0 204.204.204.2
+!
+! --- SECURITY ---------------------------------------------------
+no cdp run
+!
+banner motd ^C Unauthorized access is prohibited. All activities are monitored. ^C
+!
+line con 0
+ password 7 08701E1D5D4C
+ login
+!
+line vty 0 4
+ password 7 08701E1D5D4C
+ login
+ transport input ssh
+!
+end
