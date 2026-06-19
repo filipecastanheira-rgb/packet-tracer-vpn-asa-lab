@@ -2,10 +2,10 @@
 ### Cisco Packet Tracer Lab - Cybersecurity and Network Infrastructure
 
 
-![configs](https://img.shields.io/badge/configs-Device%20Configs-informational)
-![docs](https://img.shields.io/badge/docs-Lab%20Report-blue)
-![diagrams](https://img.shields.io/badge/diagrams-Network%20Topology-important)
-![packet--tracer](https://img.shields.io/badge/packet--tracer-.pkt%20Lab-blue)
+[![configs](https://img.shields.io/badge/configs-device%20configs-informational)](./configs/)
+[![docs](https://img.shields.io/badge/docs-lab%20report-blue)](./docs/)
+[![diagrams](https://img.shields.io/badge/diagrams-network%20topology-important)](./diagrams/)
+[![packet-tracer](https://img.shields.io/badge/packet--tracer-.pkt%20lab-blue)](./packet-tracer/)
 ---
 
 ## Overview
