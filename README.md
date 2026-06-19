@@ -1,6 +1,11 @@
 # Corporate Network with VPN, ASA Firewall and Layer 2 Security
 ### Cisco Packet Tracer Lab - Cybersecurity and Network Infrastructure
 
+
+![configs](https://img.shields.io/badge/configs-Device%20Configs-informational)
+![docs](https://img.shields.io/badge/docs-Lab%20Report-blue)
+![diagrams](https://img.shields.io/badge/diagrams-Network%20Topology-important)
+![packet--tracer](https://img.shields.io/badge/packet--tracer-.pkt%20Lab-blue)
 ---
 
 ## Overview
